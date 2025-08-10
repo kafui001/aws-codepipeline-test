@@ -194,10 +194,10 @@ class MultiBranchPipelineStack(Stack):
                 self, f"{branch_name.capitalize()}Pipeline",
                 pipeline_name=f"{branch_name}-pipeline",
                 artifact_bucket=artifact_bucket,
+                self_mutation=True,
                 cross_account_keys=True,  # still true, but using shared key/bucket
                 synth=pipelines.ShellStep(
                     "Synth",
-                    self_mutation=True,
                     input=pipelines.CodePipelineSource.connection(
                         repo_string=f"{github_owner}/{github_repo}",
                         branch=branch_name,
