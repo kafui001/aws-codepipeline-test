@@ -26,7 +26,7 @@ class AppStack(Stack):
 
         fn = _lambda.Function(
             self, "AppHandler",
-            runtime=_lambda.Runtime.PYTHON_3_13,
+            runtime=_lambda.Runtime.PYTHON_3_12,
             handler="demo_lambda.lambda_handler",
             code=_lambda.Code.from_asset("lambda"), 
             timeout=Duration.seconds(10),
