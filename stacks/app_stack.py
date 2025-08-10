@@ -35,6 +35,7 @@ class AppStack(Stack):
                 "TABLE": table.table_name
             }
         )
+        #
 
         bucket.grant_read_write(fn)
         table.grant_read_write_data(fn)
