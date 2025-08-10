@@ -26,12 +26,9 @@ class AppStack(Stack):
 
         fn = _lambda.Function(
             self, "AppHandler",
-            runtime=_lambda.Runtime.PYTHON_3_10,
-            handler="handler.main",
-            code=_lambda.InlineCode("""
-def main(event, context):
-    return {"statusCode": 200, "body": "Hello from AppStack"}
-"""),
+            runtime=_lambda.Runtime.PYTHON_3_13,
+            handler="demo_lambda.lambda_handler",
+            code=_lambda.Code.from_asset("lambda"), 
             timeout=Duration.seconds(10),
             environment={
                 "BUCKET": bucket.bucket_name,
