@@ -415,7 +415,6 @@ from aws_cdk import (
     Stack,
     Stage,
     aws_codepipeline as codepipeline,
-    aws_codepipeline_actions as cpactions,
     aws_secretsmanager as secretsmanager,
     aws_iam as iam,
     aws_s3 as s3,
@@ -439,19 +438,25 @@ class AppStage(Stage):
 
 
 class MultiBranchPipelineStack(Stack):
-    def __init__(self, scope: Construct, id: str, *,
-                 github_owner: str,
-                 github_repo: str,
-                 secret_name: str,
-                 dev_env: Environment,
-                 stage_env: Environment,
-                 stage_approval_emails: list[str],
-                 **kwargs):
+    def __init__(
+        self,
+        scope: Construct,
+        id: str,
+        *,
+        github_owner: str,
+        github_repo: str,
+        secret_name: str,
+        dev_env: Environment,
+        stage_env: Environment,
+        stage_approval_emails: list[str],
+        **kwargs
+    ):
         super().__init__(scope, id, **kwargs)
 
         # Shared KMS key
         artifact_key = kms.Key(
-            self, "ArtifactKey",
+            self,
+            "ArtifactKey",
             enable_key_rotation=True,
             removal_policy=RemovalPolicy.DESTROY,
         )
@@ -465,16 +470,17 @@ class MultiBranchPipelineStack(Stack):
                         "kms:Decrypt",
                         "kms:ReEncrypt*",
                         "kms:GenerateDataKey*",
-                        "kms:DescribeKey"
+                        "kms:DescribeKey",
                     ],
                     principals=[iam.AccountPrincipal(account)],
-                    resources=["*"]
+                    resources=["*"],
                 )
             )
 
         # Shared artifact bucket
         artifact_bucket = s3.Bucket(
-            self, "ArtifactBucket",
+            self,
+            "ArtifactBucket",
             encryption=s3.BucketEncryption.KMS,
             encryption_key=artifact_key,
             removal_policy=RemovalPolicy.DESTROY,
@@ -488,17 +494,17 @@ class MultiBranchPipelineStack(Stack):
                     actions=[
                         "s3:GetObject",
                         "s3:GetObjectVersion",
-                        "s3:PutObject"
+                        "s3:PutObject",
                     ],
                     principals=[iam.AccountPrincipal(account)],
-                    resources=[artifact_bucket.arn_for_objects("*")]
+                    resources=[artifact_bucket.arn_for_objects("*")],
                 )
             )
             artifact_bucket.add_to_resource_policy(
                 iam.PolicyStatement(
                     actions=["s3:ListBucket"],
                     principals=[iam.AccountPrincipal(account)],
-                    resources=[artifact_bucket.bucket_arn]
+                    resources=[artifact_bucket.bucket_arn],
                 )
             )
 
@@ -506,30 +512,29 @@ class MultiBranchPipelineStack(Stack):
         approval_topic = sns.Topic(self, "ApprovalNotificationTopic")
 
         # Subscribe all stage approval emails
-        all_approval_emails = set(stage_approval_emails)
-        for email in all_approval_emails:
+        for email in set(stage_approval_emails):
             approval_topic.add_subscription(subscriptions.EmailSubscription(email))
 
-        # Pipelines for each branch
         self.pipelines = {}
         for branch_name, env, approval_emails in [
             ("dev", dev_env, []),
             ("stage", stage_env, stage_approval_emails),
         ]:
-            pipeline = pipelines.CodePipeline(
-                self, f"{branch_name.capitalize()}Pipeline",
+            # Create underlying CodePipeline with V2 type explicitly
+            underlying_pipeline = codepipeline.Pipeline(
+                self,
+                f"{branch_name.capitalize()}CodePipeline",
                 pipeline_name=f"{branch_name}-pipeline",
+                pipeline_type=codepipeline.PipelineType.V2,
                 artifact_bucket=artifact_bucket,
-                self_mutation=True,
                 cross_account_keys=True,
-                # Explicitly define the underlying CodePipeline to set the type to V2
-                code_pipeline=codepipeline.Pipeline(
-                    self, f"{branch_name.capitalize()}CodePipeline",
-                    pipeline_name=f"{branch_name}-pipeline",
-                    pipeline_type=codepipeline.PipelineType.V2,
-                    artifact_bucket=artifact_bucket,
-                    cross_account_keys=True,
-                ),
+            )
+
+            pipeline = pipelines.CodePipeline(
+                self,
+                f"{branch_name.capitalize()}Pipeline",
+                code_pipeline=underlying_pipeline,
+                self_mutation=True,
                 synth=pipelines.ShellStep(
                     "Synth",
                     input=pipelines.CodePipelineSource.connection(
@@ -565,14 +570,13 @@ class MultiBranchPipelineStack(Stack):
         pipeline_names = [f"{branch}-pipeline" for branch in self.pipelines.keys()]
 
         events.Rule(
-            self, "ManualApprovalRule",
-            event_pattern={
-                "source": ["aws.codepipeline"],
-                "detail_type": ["CodePipeline Manual Approval Needed"],
-                "detail": {
-                    "pipeline": pipeline_names
-                }
-            },
-            targets=[targets.SnsTopic(approval_topic)]
+            self,
+            "ManualApprovalRule",
+            event_pattern=events.EventPattern(
+                source=["aws.codepipeline"],
+                detail_type=["CodePipeline Manual Approval Needed"],
+                detail={"pipeline": pipeline_names},
+            ),
+            targets=[targets.SnsTopic(approval_topic)],
         )
 
