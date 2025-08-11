@@ -38,13 +38,14 @@ app = App()
 DEV_ENV = Environment(account="648867426675", region="us-west-2")
 STAGE_ENV = Environment(account="265466609227", region="us-west-2")
 # PROD_ENV = Environment(account="333333333333", region="us-west-2")
+#####
 
 main_pipeline = MultiBranchPipelineStack(
     app,
     "PipelineStack",
     github_owner="kafui001",
     github_repo="aws-codepipeline-test",
-    secret_name="github/connection-arn",
+    # secret_name="github/connection-arn",
     dev_env=DEV_ENV,
     stage_env=STAGE_ENV,
     # prod_env=PROD_ENV,

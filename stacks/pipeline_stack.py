@@ -415,7 +415,6 @@ from aws_cdk import (
     Stack,
     Stage,
     aws_codepipeline as codepipeline,
-    aws_secretsmanager as secretsmanager,
     aws_iam as iam,
     aws_s3 as s3,
     aws_kms as kms,
@@ -445,7 +444,6 @@ class MultiBranchPipelineStack(Stack):
         *,
         github_owner: str,
         github_repo: str,
-        secret_name: str,
         dev_env: Environment,
         stage_env: Environment,
         stage_approval_emails: list[str],
@@ -511,8 +509,9 @@ class MultiBranchPipelineStack(Stack):
         # Create SNS topic for approval notifications
         approval_topic = sns.Topic(self, "ApprovalNotificationTopic")
 
-        # Subscribe all stage approval emails
-        for email in set(stage_approval_emails):
+        # Subscribe all stage approval emails once
+        all_approval_emails = set(stage_approval_emails)
+        for email in all_approval_emails:
             approval_topic.add_subscription(subscriptions.EmailSubscription(email))
 
         self.pipelines = {}
@@ -579,4 +578,5 @@ class MultiBranchPipelineStack(Stack):
             ),
             targets=[targets.SnsTopic(approval_topic)],
         )
+
 
