@@ -371,7 +371,7 @@ class MultiBranchPipelineStack(Stack):
                     ),
                     commands=[
                         "pip install -r requirements.txt",
-                        "npm install -g aws-cdk@2",
+                        "npm install -g aws-cdk@2.160.0",
                         "cdk synth",
                     ],
                 ),
