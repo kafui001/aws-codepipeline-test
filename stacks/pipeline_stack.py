@@ -531,7 +531,7 @@ class MultiBranchPipelineStack(Stack):
 
             pipeline = pipelines.CodePipeline(
                 self,
-                f"{branch_name.capitalize()}Pipeline",
+                f"{branch_name.lower()}Pipeline",
                 code_pipeline=underlying_pipeline,
                 self_mutation=True,
                 synth=pipelines.ShellStep(

@@ -42,7 +42,7 @@ STAGE_ENV = Environment(account="265466609227", region="us-west-2")
 
 main_pipeline = MultiBranchPipelineStack(
     app,
-    "PipelineStack",
+    "MainPipelineStack",
     github_owner="kafui001",
     github_repo="aws-codepipeline-test",
     # secret_name="github/connection-arn",
